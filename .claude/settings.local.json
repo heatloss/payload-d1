@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/mike/Sites/chimera-cms/src/collections/**)",
+      "Read(//Users/mike/Sites/chimera-cms/**)",
+      "Read(//Users/mike/Sites/chimera-cms/src/**)",
+      "Bash(sqlite3:*)",
+      "WebFetch(domain:developers.cloudflare.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(grep:*)",
+      "WebFetch(domain:blog.cloudflare.com)",
+      "WebFetch(domain:www.cloudflare.com)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
