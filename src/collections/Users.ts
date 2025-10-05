@@ -10,7 +10,6 @@ export const Users: CollectionConfig = {
   },
   auth: {
     verify: false, // Disable email verification for local development
-    disableLocalStrategy: false,
     forgotPassword: {
       generateEmailHTML: ({ token }) => {
         return `<p>Reset your password by clicking <a href="${process.env.PAYLOAD_PUBLIC_SERVER_URL}/reset-password?token=${token}">here</a>.</p>`

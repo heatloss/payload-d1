@@ -84,7 +84,7 @@ export async function generateImageSizes(
   // Convert ArrayBuffer to Buffer if needed
   const buffer = imageBuffer instanceof Buffer
     ? imageBuffer
-    : Buffer.from(imageBuffer)
+    : Buffer.from(new Uint8Array(imageBuffer))
 
   const baseFilename = originalFilename.replace(/\.[^.]+$/, '') // Remove extension
   const ext = mimeType.includes('png') ? 'png' : 'jpg'
@@ -123,7 +123,7 @@ export async function generateImageSizes(
         // Check if we're in a Node.js environment (not Workers)
         const isNodeEnv = typeof process !== 'undefined' && process.versions?.node
         const uploadData = isNodeEnv
-          ? new Blob([resizedBuffer])
+          ? new Blob([new Uint8Array(resizedBuffer)])
           : resizedBuffer
 
         await r2Bucket.put(r2Key, uploadData, {
