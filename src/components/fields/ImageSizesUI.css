@@ -1,0 +1,59 @@
+.image-sizes-container {
+  margin-bottom: var(--base);
+}
+
+.image-sizes-heading {
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: calc(var(--base) * 0.75);
+  color: var(--theme-text);
+}
+
+.image-sizes-empty {
+  padding: var(--base);
+  background-color: var(--theme-elevation-50);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--base);
+  color: var(--theme-elevation-400);
+}
+
+.image-sizes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: calc(var(--base) * 0.75);
+}
+
+.image-size-card {
+  border: 1px solid var(--theme-elevation-100);
+  border-radius: var(--border-radius);
+  padding: calc(var(--base) * 0.5);
+  background-color: var(--theme-elevation-0);
+}
+
+.image-size-preview {
+  margin-bottom: calc(var(--base) * 0.5);
+}
+
+.image-size-img {
+  width: 100%;
+  height: auto;
+  border-radius: var(--border-radius-s);
+  border: 1px solid var(--theme-elevation-100);
+}
+
+.image-size-meta {
+  font-size: var(--font-size-small);
+}
+
+.image-size-name {
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: calc(var(--base) * 0.25);
+  text-transform: capitalize;
+  color: var(--theme-text);
+}
+
+.image-size-dimensions,
+.image-size-filesize {
+  color: var(--theme-elevation-400);
+  font-size: var(--font-size-small);
+}

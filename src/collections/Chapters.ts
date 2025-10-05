@@ -8,8 +8,8 @@ export const Chapters: CollectionConfig = {
     group: 'Comics',
     description: 'Organize comic pages into chapters. Order is currently read-only - use the Move Chapter API endpoint to reorder chapters without conflicts.',
     listSearchableFields: ['title', 'description'],
-    defaultSort: 'order', // Sort by order by default
   },
+  defaultSort: 'order', // Sort by order by default
   access: {
     // Same access control as comics - only authors and editors
     create: ({ req: { user } }) => {
@@ -19,20 +19,22 @@ export const Chapters: CollectionConfig = {
     update: ({ req: { user } }) => {
       if (user?.role === 'admin') return true
       if (user?.role === 'editor') return true
+      if (!user?.id) return false
       // Creators can only edit chapters for their own comics
       return {
         'comic.author': {
-          equals: user?.id,
+          equals: user.id,
         },
       }
     },
     delete: ({ req: { user } }) => {
       if (user?.role === 'admin') return true
       if (user?.role === 'editor') return true
+      if (!user?.id) return false
       // Creators can only delete chapters for their own comics
       return {
         'comic.author': {
-          equals: user?.id,
+          equals: user.id,
         },
       }
     },
@@ -145,9 +147,6 @@ export const Chapters: CollectionConfig = {
       name: 'seoMeta',
       type: 'group',
       label: 'SEO & Metadata',
-      admin: {
-        collapsed: true,
-      },
       fields: [
         {
           name: 'slug',
@@ -195,7 +194,6 @@ export const Chapters: CollectionConfig = {
       type: 'group',
       label: 'Chapter Statistics',
       admin: {
-        collapsed: true,
         readOnly: true,
       },
       fields: [
@@ -243,7 +241,7 @@ export const Chapters: CollectionConfig = {
         console.log(`✅ Chapter ${operation} completed: ${doc.title}`)
         
         // Update comic chapter statistics immediately and safely
-        if (doc.comic && req.payload && !req.skipComicStatsCalculation) {
+        if (doc.comic && req.payload && !(req as any).skipComicStatsCalculation) {
           try {
             const comicId = typeof doc.comic === 'object' ? doc.comic.id : doc.comic
             
@@ -258,7 +256,7 @@ export const Chapters: CollectionConfig = {
                 ...req,
                 skipGlobalPageCalculation: true,
                 skipComicStatsCalculation: true, // Prevent loops
-              }
+              } as any
             })
             
             // Update comic with chapter count
@@ -274,7 +272,7 @@ export const Chapters: CollectionConfig = {
                 ...req,
                 skipGlobalPageCalculation: true,
                 skipComicStatsCalculation: true, // Prevent loops
-              },
+              } as any,
             })
             
             console.log(`📚 Updated comic chapter count: ${chapters.totalDocs} chapters`)

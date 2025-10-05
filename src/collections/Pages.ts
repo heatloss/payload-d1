@@ -20,10 +20,11 @@ export const Pages: CollectionConfig = {
     update: ({ req: { user } }) => {
       if (user?.role === 'admin') return true
       if (user?.role === 'editor') return true
+      if (!user?.id) return false
       // Creators can only edit pages for their own comics
       return {
         'comic.author': {
-          equals: user?.id,
+          equals: user.id,
         },
       }
     },
@@ -102,7 +103,7 @@ export const Pages: CollectionConfig = {
         description: 'Page number within this chapter (0 = chapter cover, 1+ = regular pages)',
         position: 'sidebar',
       },
-      validate: (val) => {
+      validate: (val: number) => {
         if (val !== undefined && val !== null && val < 0) {
           return 'Chapter page number must be 0 or greater (0 = chapter cover)'
         }
@@ -126,7 +127,7 @@ export const Pages: CollectionConfig = {
                     req: {
                       ...req,
                       skipGlobalPageCalculation: true, // Prevent hook cascades
-                    }
+                    } as any
                   })
                   
                   if (existingPages.docs.length === 0) {
@@ -300,7 +301,7 @@ export const Pages: CollectionConfig = {
         },
       },
       validate: (val, { siblingData }) => {
-        if (siblingData.status === 'scheduled' && !val) {
+        if ((siblingData as any).status === 'scheduled' && !val) {
           return 'Published date is required for scheduled pages'
         }
         return true
@@ -312,7 +313,6 @@ export const Pages: CollectionConfig = {
       type: 'group',
       label: 'Page Navigation',
       admin: {
-        collapsed: true,
         readOnly: true,
       },
       fields: [
@@ -357,10 +357,7 @@ export const Pages: CollectionConfig = {
       name: 'seoMeta',
       type: 'group',
       label: 'SEO & Metadata',
-      admin: {
-        collapsed: true,
-      },
-      fields: [
+            fields: [
         {
           name: 'slug',
           type: 'text',
@@ -412,7 +409,6 @@ export const Pages: CollectionConfig = {
       type: 'group',
       label: 'Reader Statistics',
       admin: {
-        collapsed: true,
         readOnly: true,
       },
       fields: [
@@ -463,7 +459,7 @@ export const Pages: CollectionConfig = {
         // Calculate global page number based on chapter order and chapter page number
         // Using guard clause to prevent hook cascades
         
-        if (data.chapter && (data.chapterPageNumber !== undefined && data.chapterPageNumber !== null) && req.payload && !req.skipGlobalPageCalculation) {
+        if (data.chapter && (data.chapterPageNumber !== undefined && data.chapterPageNumber !== null) && req.payload && !(req as any).skipGlobalPageCalculation) {
           try {
             
             // Handle chapter ID - it might be an object or string
@@ -476,7 +472,7 @@ export const Pages: CollectionConfig = {
               req: {
                 ...req,
                 skipGlobalPageCalculation: true, // Prevent cascading hooks
-              }
+              } as any
             })
             
             if (chapter && chapter.order !== undefined) {
@@ -495,7 +491,7 @@ export const Pages: CollectionConfig = {
                 req: {
                   ...req,
                   skipGlobalPageCalculation: true, // Prevent cascading hooks
-                }
+                } as any
               })
               
               // Count total pages in all previous chapters - WITH GUARD FLAG
@@ -512,7 +508,7 @@ export const Pages: CollectionConfig = {
                   req: {
                     ...req,
                     skipGlobalPageCalculation: true, // Prevent cascading hooks
-                  }
+                  } as any
                 })
                 
                 totalPreviousPages += pagesInChapter.totalDocs
@@ -571,7 +567,7 @@ export const Pages: CollectionConfig = {
           console.log(`✅ Page operation ${operation} completed successfully`)
           
           // Update comic statistics immediately but safely
-          if (doc?.comic && req.payload && !req.skipComicStatsCalculation) {
+          if (doc?.comic && req.payload && !(req as any).skipComicStatsCalculation) {
             try {
               const comicId = typeof doc.comic === 'object' ? doc.comic.id : doc.comic
               await updateComicStatisticsImmediate(req.payload, comicId, req)
@@ -604,7 +600,7 @@ async function updateComicStatisticsImmediate(payload: any, comicId: string, req
         ...req,
         skipGlobalPageCalculation: true,
         skipComicStatsCalculation: true, // Prevent loops
-      }
+      } as any
     })
     
     // Count chapters with guard clauses
@@ -618,7 +614,7 @@ async function updateComicStatisticsImmediate(payload: any, comicId: string, req
         ...req,
         skipGlobalPageCalculation: true,
         skipComicStatsCalculation: true, // Prevent loops
-      }
+      } as any
     })
     
     // Find last published page date
@@ -626,8 +622,8 @@ async function updateComicStatisticsImmediate(payload: any, comicId: string, req
     if (pages.docs.length > 0) {
       // Sort by publishedDate to find the most recent
       const sortedPages = pages.docs
-        .filter(page => page.publishedDate)
-        .sort((a, b) => new Date(b.publishedDate).getTime() - new Date(a.publishedDate).getTime())
+        .filter((page: any) => page.publishedDate)
+        .sort((a: any, b: any) => new Date(b.publishedDate).getTime() - new Date(a.publishedDate).getTime())
       
       if (sortedPages.length > 0) {
         lastPagePublished = sortedPages[0].publishedDate
@@ -649,7 +645,7 @@ async function updateComicStatisticsImmediate(payload: any, comicId: string, req
         ...req,
         skipGlobalPageCalculation: true,
         skipComicStatsCalculation: true, // Prevent loops
-      },
+      } as any,
     })
     
     console.log(`📊 Updated comic statistics: ${pages.totalDocs} pages, ${chapters.totalDocs} chapters`)

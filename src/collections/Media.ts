@@ -1,4 +1,6 @@
 import type { CollectionConfig } from 'payload'
+import { generateImageSizes } from '../lib/generateImageSizes'
+import { getCloudflareContext } from '@opennextjs/cloudflare'
 
 export const Media: CollectionConfig = {
   slug: 'media',
@@ -16,80 +18,33 @@ export const Media: CollectionConfig = {
     update: ({ req: { user } }) => {
       if (user?.role === 'admin') return true
       if (user?.role === 'editor') return true
+      if (!user?.id) return false
       // Creators can only edit media they uploaded
       return {
         uploadedBy: {
-          equals: user?.id,
+          equals: user.id,
         },
       }
     },
     delete: ({ req: { user } }) => {
       if (user?.role === 'admin') return true
       if (user?.role === 'editor') return true
+      if (!user?.id) return false
       // Creators can only delete media they uploaded
       return {
         uploadedBy: {
-          equals: user?.id,
+          equals: user.id,
         },
       }
     },
   },
   upload: {
     staticDir: 'media',
-    staticURL: '/media',
-    imageSizes: [
-      {
-        name: 'thumbnail',
-        width: 400,
-        height: undefined, // Let height be determined by aspect ratio
-        position: 'centre',
-        fit: 'inside', // Preserve aspect ratio, don't crop
-      },
-      {
-        name: 'thumbnail_small',
-        width: 200,
-        height: undefined, // Smaller version for compact displays
-        position: 'centre',
-        fit: 'inside',
-      },
-      {
-        name: 'webcomic_page',
-        width: 800,
-        height: undefined,
-        position: 'centre',
-        fit: 'inside',
-      },
-      {
-        name: 'webcomic_mobile',
-        width: 400,
-        height: undefined,
-        position: 'centre',
-        fit: 'inside',
-      },
-      {
-        name: 'cover_image',
-        width: 600,
-        height: 800,
-        position: 'centre',
-        fit: 'cover',
-      },
-      {
-        name: 'social_preview',
-        width: 1200,
-        height: 630,
-        position: 'centre',
-        fit: 'cover',
-      },
-      {
-        name: 'avatar',
-        width: 200,
-        height: 200,
-        position: 'centre',
-        fit: 'cover',
-      },
-    ],
+    // NOTE: Image sizes disabled due to D1's 100 parameter limit
+    // Sizes are generated via custom hook and stored as JSON
+    imageSizes: [],
     mimeTypes: ['image/*'],
-    adminThumbnail: 'thumbnail', // Should now be aspect-ratio preserving
+    disableLocalStorage: true, // R2 only, no local storage
   },
   fields: [
     {
@@ -109,6 +64,27 @@ export const Media: CollectionConfig = {
           }
         ]
       }
+    },
+    {
+      name: 'imageSizesPreview',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: '@/components/fields/ImageSizesUI#ImageSizesUI',
+        },
+      },
+    },
+    {
+      name: 'imageSizes',
+      type: 'json',
+      label: 'Generated Image Sizes (Raw Data)',
+      admin: {
+        readOnly: true,
+        description: 'Auto-generated image variants stored as JSON',
+        components: {
+          Cell: '@/components/fields/ImageSizesCell#ImageSizesCell',
+        },
+      },
     },
     {
       name: 'alt',
@@ -187,7 +163,6 @@ export const Media: CollectionConfig = {
         condition: (data, siblingData) => {
           return ['comic_page', 'comic_cover', 'chapter_cover'].includes(siblingData?.mediaType)
         },
-        collapsed: true,
       },
       fields: [
         {
@@ -259,7 +234,6 @@ export const Media: CollectionConfig = {
       type: 'group',
       label: 'Technical Information',
       admin: {
-        collapsed: true,
         readOnly: true,
       },
       fields: [
@@ -304,7 +278,6 @@ export const Media: CollectionConfig = {
       type: 'group',
       label: 'Usage Statistics',
       admin: {
-        collapsed: true,
         readOnly: true,
       },
       fields: [
@@ -341,19 +314,74 @@ export const Media: CollectionConfig = {
     },
   ],
   hooks: {
+    afterDelete: [
+      async ({ doc }) => {
+        // Clean up generated image size files from R2
+        if (doc.imageSizes && typeof doc.imageSizes === 'object') {
+          try {
+            const cloudflare = await getCloudflareContext({ async: true })
+            const r2Bucket = cloudflare.env.R2
+
+            const sizes = Object.values(doc.imageSizes)
+            console.log(`🗑️  Deleting ${sizes.length} generated image sizes for ${doc.filename}`)
+
+            for (const size of sizes) {
+              if (size && typeof size === 'object' && 'filename' in size) {
+                try {
+                  await r2Bucket.delete(size.filename)
+                  console.log(`   ✅ Deleted ${size.filename}`)
+                } catch (error) {
+                  console.error(`   ❌ Failed to delete ${size.filename}:`, error)
+                }
+              }
+            }
+          } catch (error) {
+            console.error('❌ Error cleaning up image sizes:', error)
+          }
+        }
+      },
+    ],
     beforeChange: [
-      ({ data, req }) => {
+      async ({ data, req, operation }) => {
         // Extract technical metadata from uploaded file
         if (req.file) {
           data.technicalMeta = {
             ...data.technicalMeta,
             fileSize: req.file.size,
-            // Additional metadata would be extracted here in a real implementation
+          }
+
+          // Generate image size variants (D1 parameter limit workaround)
+          if (operation === 'create' && req.file.data) {
+            try {
+              const cloudflare = await getCloudflareContext({ async: true })
+              const r2Bucket = cloudflare.env.R2
+
+              // Ensure we have a proper Buffer
+              const imageBuffer = Buffer.isBuffer(req.file.data)
+                ? req.file.data
+                : Buffer.from(req.file.data)
+
+              const mimeType = req.file.mimetype || 'image/jpeg'
+
+              console.log(`🎨 Generating image sizes for ${req.file.name} (${mimeType}, ${imageBuffer.length} bytes)...`)
+              console.log(`   R2 bucket available: ${!!r2Bucket}`)
+
+              const sizes = await generateImageSizes(
+                imageBuffer,
+                req.file.name || 'image.jpg',
+                r2Bucket,
+                mimeType
+              )
+
+              data.imageSizes = sizes
+              console.log(`✅ Generated ${Object.keys(sizes).length} image sizes for ${req.file.name}`)
+            } catch (error) {
+              console.error('❌ Error generating image sizes:', error)
+              // Don't fail the upload if size generation fails
+            }
           }
         }
-        
-        // Usage tracking will be handled automatically by page/comic relationships
-        
+
         return data
       },
     ],

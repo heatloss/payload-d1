@@ -16,10 +16,11 @@ export const Comics: CollectionConfig = {
     update: ({ req: { user } }) => {
       if (user?.role === 'admin') return true
       if (user?.role === 'editor') return true
+      if (!user?.id) return false
       // Creators can only edit their own comics
       return {
         author: {
-          equals: user?.id,
+          equals: user.id,
         },
       }
     },
@@ -263,10 +264,7 @@ export const Comics: CollectionConfig = {
       name: 'seoMeta',
       type: 'group',
       label: 'SEO & Metadata',
-      admin: {
-        collapsed: true,
-      },
-      fields: [
+            fields: [
         {
           name: 'metaTitle',
           type: 'text',
@@ -300,10 +298,7 @@ export const Comics: CollectionConfig = {
       name: 'stats',
       type: 'group',
       label: 'Statistics',
-      admin: {
-        collapsed: true,
-      },
-      fields: [
+            fields: [
         {
           name: 'totalPages',
           type: 'number',

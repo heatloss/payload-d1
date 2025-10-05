@@ -10,6 +10,7 @@ export const Users: CollectionConfig = {
   },
   auth: {
     verify: false, // Disable email verification for local development
+    disableLocalStrategy: false,
     forgotPassword: {
       generateEmailHTML: ({ token }) => {
         return `<p>Reset your password by clicking <a href="${process.env.PAYLOAD_PUBLIC_SERVER_URL}/reset-password?token=${token}">here</a>.</p>`
@@ -33,9 +34,10 @@ export const Users: CollectionConfig = {
     // Users can update their own profile, admins can update anyone
     update: ({ req: { user } }) => {
       if (user?.role === 'admin') return true
+      if (!user?.id) return false
       return {
         id: {
-          equals: user?.id,
+          equals: user.id,
         },
       }
     },
@@ -173,10 +175,7 @@ export const Users: CollectionConfig = {
           name: 'socialLinks',
           type: 'group',
           label: 'Social Media Links',
-          admin: {
-            collapsed: true,
-          },
-          fields: [
+                    fields: [
             {
               name: 'bluesky',
               type: 'text',
@@ -231,10 +230,7 @@ export const Users: CollectionConfig = {
           name: 'preferences',
           type: 'group',
           label: 'Creator Preferences',
-          admin: {
-            collapsed: true,
-          },
-          fields: [
+                    fields: [
             {
               name: 'emailNotifications',
               type: 'group',
@@ -344,7 +340,6 @@ export const Users: CollectionConfig = {
       type: 'group',
       label: 'Account Information',
       admin: {
-        collapsed: true,
         readOnly: true,
       },
       fields: [

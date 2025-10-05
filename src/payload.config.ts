@@ -18,18 +18,18 @@ import { Pages } from './collections/Pages'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
-const cloudflareRemoteBindings = process.env.NODE_ENV === 'production'
+const isNextBuild = process.argv.some(arg => arg.includes('next') && (arg.includes('build') || process.argv.includes('build')))
+const cloudflareRemoteBindings = process.env.NODE_ENV === 'production' && !isNextBuild
+const isCommandLineOperation = process.argv.find((value) => value.match(/^(generate|migrate):?/))
+
 const cloudflare =
-  process.argv.find((value) => value.match(/^(generate|migrate):?/)) || !cloudflareRemoteBindings
+  isCommandLineOperation || !cloudflareRemoteBindings
     ? await getCloudflareContextFromWrangler()
     : await getCloudflareContext({ async: true })
 
 export default buildConfig({
   admin: {
     user: Users.slug,
-    importMap: {
-      baseDir: path.resolve(dirname),
-    },
   },
   collections: [Users, Comics, Chapters, Pages, Media],
   editor: lexicalEditor(),
@@ -38,11 +38,24 @@ export default buildConfig({
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
   db: sqliteD1Adapter({ binding: cloudflare.env.D1 }),
+  cors: [
+    process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000',
+    'http://localhost:3333',
+    'http://localhost:8888',  // Frontend dev server
+  ],
+  csrf: [
+    process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000',
+    'http://localhost:3333',
+    'http://localhost:8888',  // Frontend dev server
+  ],
+  cookiePrefix: 'payload',
   plugins: [
     payloadCloudPlugin(),
     r2Storage({
       bucket: cloudflare.env.R2,
-      collections: { media: true },
+      collections: {
+        media: true,
+      },
     }),
   ],
 })

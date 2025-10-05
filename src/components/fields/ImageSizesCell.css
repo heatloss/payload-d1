@@ -1,0 +1,23 @@
+.image-sizes-cell {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--base) * 0.5);
+}
+
+.image-sizes-cell-thumbnail {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: var(--border-radius-s);
+  border: 1px solid var(--theme-elevation-100);
+}
+
+.image-sizes-cell-count {
+  font-size: var(--font-size-small);
+  color: var(--theme-elevation-400);
+}
+
+.image-sizes-cell-empty {
+  color: var(--theme-elevation-300);
+  font-size: var(--font-size-small);
+}

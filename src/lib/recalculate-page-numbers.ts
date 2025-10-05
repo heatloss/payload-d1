@@ -67,7 +67,7 @@ export async function recalculateGlobalPageNumbers(
           },
           req: {
             skipGlobalPageCalculation: true // Prevent triggering global page calculation hooks
-          }
+          } as any
         })
 
         updatesPerformed.push({
@@ -102,7 +102,7 @@ export async function recalculateGlobalPageNumbers(
       totalPages: 0,
       totalChapters: 0,
       updates: [],
-      error: error.message
+      error: (error as Error).message
     }
   }
 }
