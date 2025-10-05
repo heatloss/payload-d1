@@ -326,7 +326,7 @@ export const Media: CollectionConfig = {
             console.log(`🗑️  Deleting ${sizes.length} generated image sizes for ${doc.filename}`)
 
             for (const size of sizes) {
-              if (size && typeof size === 'object' && 'filename' in size) {
+              if (size && typeof size === 'object' && 'filename' in size && typeof size.filename === 'string') {
                 try {
                   await r2Bucket.delete(size.filename)
                   console.log(`   ✅ Deleted ${size.filename}`)
