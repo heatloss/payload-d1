@@ -10,7 +10,14 @@
  * For Cloudflare Workers production, you'll need to use jSquash or Cloudflare Images.
  */
 
-import sharp from 'sharp'
+// Conditional import of Sharp (only available in Node.js, not Cloudflare Workers)
+let sharp: any
+try {
+  sharp = require('sharp')
+} catch (e) {
+  // Sharp not available in this environment (likely Cloudflare Workers)
+  sharp = null
+}
 
 export interface ImageSizeConfig {
   name: string
@@ -79,6 +86,12 @@ export async function generateImageSizes(
   mimeType: string = 'image/jpeg',
   basePath: string = 'media'
 ): Promise<Record<string, GeneratedImageSize>> {
+  // Check if Sharp is available (only in Node.js environment)
+  if (!sharp) {
+    console.warn('Sharp is not available in this environment. Image size generation will be skipped.')
+    return {}
+  }
+
   const sizes: Record<string, GeneratedImageSize> = {}
 
   // Convert ArrayBuffer to Buffer if needed

@@ -58,6 +58,7 @@
     "playwright": "1.55.1",
     "playwright-core": "1.55.1",
     "prettier": "^3.6.2",
+    "sharp": "^0.34.4",
     "typescript": "5.9.3",
     "vite-tsconfig-paths": "5.1.4",
     "vitest": "3.2.4",
