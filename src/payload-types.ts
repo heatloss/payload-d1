@@ -68,6 +68,9 @@ export interface Config {
   blocks: {};
   collections: {
     users: User;
+    comics: Comic;
+    chapters: Chapter;
+    pages: Page;
     media: Media;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -76,6 +79,9 @@ export interface Config {
   collectionsJoins: {};
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
+    comics: ComicsSelect<false> | ComicsSelect<true>;
+    chapters: ChaptersSelect<false> | ChaptersSelect<true>;
+    pages: PagesSelect<false> | PagesSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -118,7 +124,98 @@ export interface UserAuthOperations {
  * via the `definition` "users".
  */
 export interface User {
-  id: number;
+  id: string;
+  /**
+   * Public name shown to readers and other creators
+   */
+  displayName?: string | null;
+  /**
+   * User permission level
+   */
+  role: 'reader' | 'creator' | 'editor' | 'admin';
+  status: 'active' | 'inactive' | 'banned';
+  creatorProfile?: {
+    /**
+     * Tell readers about yourself and your work
+     */
+    bio?: string | null;
+    /**
+     * Your profile picture for comic pages and author info
+     */
+    avatar?: (string | null) | Media;
+    /**
+     * Your personal website or portfolio
+     */
+    website?: string | null;
+    socialLinks?: {
+      /**
+       * Your Bluesky handle (e.g., username.bsky.social)
+       */
+      bluesky?: string | null;
+      /**
+       * Without the @ symbol
+       */
+      instagram?: string | null;
+      /**
+       * Full Tumblr blog URL
+       */
+      tumblr?: string | null;
+      /**
+       * Your Discord server invite URL (e.g., https://discord.gg/ps2JtZA)
+       */
+      discord?: string | null;
+      /**
+       * Full Patreon page URL
+       */
+      patreon?: string | null;
+      /**
+       * Without the @ symbol
+       */
+      kofi?: string | null;
+    };
+    preferences?: {
+      emailNotifications?: {
+        newComments?: boolean | null;
+        weeklyStats?: boolean | null;
+        systemUpdates?: boolean | null;
+      };
+      privacySettings?: {
+        showEmail?: boolean | null;
+        showStatsPublic?: boolean | null;
+      };
+    };
+  };
+  readerProfile?: {
+    /**
+     * Help us recommend comics you might enjoy
+     */
+    favoriteGenres?:
+      | (
+          | 'adventure'
+          | 'comedy'
+          | 'drama'
+          | 'fantasy'
+          | 'horror'
+          | 'mystery'
+          | 'romance'
+          | 'sci-fi'
+          | 'slice-of-life'
+          | 'superhero'
+          | 'thriller'
+          | 'western'
+        )[]
+      | null;
+    readingPreferences?: {
+      hideNSFW?: boolean | null;
+      autoSubscribe?: boolean | null;
+    };
+  };
+  accountMeta?: {
+    joinedDate?: string | null;
+    lastActive?: string | null;
+    totalComics?: number | null;
+    totalPages?: number | null;
+  };
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -142,8 +239,91 @@ export interface User {
  * via the `definition` "media".
  */
 export interface Media {
-  id: number;
-  alt: string;
+  id: string;
+  /**
+   * Auto-generated image variants stored as JSON
+   */
+  imageSizes?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Optional alt text (for webcomics, alt text is usually set on the page, not the raw image)
+   */
+  alt?: string | null;
+  /**
+   * Optional caption or description for this image
+   */
+  caption?: string | null;
+  /**
+   * What type of image is this?
+   */
+  mediaType: 'general' | 'comic_page' | 'comic_cover' | 'chapter_cover' | 'user_avatar' | 'website_asset';
+  uploadedBy: string | User;
+  /**
+   * Whether this image can be viewed by the public
+   */
+  isPublic?: boolean | null;
+  comicMeta?: {
+    /**
+     * Which comic this image belongs to
+     */
+    relatedComic?: (string | null) | Comic;
+    /**
+     * If this is a comic page, what page number?
+     */
+    pageNumber?: number | null;
+    /**
+     * If this is a chapter cover, what chapter number?
+     */
+    chapterNumber?: number | null;
+    /**
+     * Check if this image contains mature/adult content
+     */
+    isNSFW?: boolean | null;
+  };
+  technicalMeta?: {
+    originalDimensions?: {
+      width?: number | null;
+      height?: number | null;
+    };
+    fileSize?: number | null;
+    colorProfile?: string | null;
+  };
+  usage?: {
+    /**
+     * Number of times this image has been viewed
+     */
+    viewCount?: number | null;
+    /**
+     * Number of times this image has been downloaded
+     */
+    downloadCount?: number | null;
+    /**
+     * Content that uses this image
+     */
+    usedInPages?:
+      | (
+          | {
+              relationTo: 'comics';
+              value: string | Comic;
+            }
+          | {
+              relationTo: 'pages';
+              value: string | Page;
+            }
+          | {
+              relationTo: 'chapters';
+              value: string | Chapter;
+            }
+        )[]
+      | null;
+  };
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -155,6 +335,275 @@ export interface Media {
   height?: number | null;
   focalX?: number | null;
   focalY?: number | null;
+  sizes?: {};
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comics".
+ */
+export interface Comic {
+  id: string;
+  /**
+   * The name of your webcomic series
+   */
+  title: string;
+  /**
+   * URL-friendly version of the title (e.g., "my-awesome-comic")
+   */
+  slug: string;
+  /**
+   * A brief summary of your webcomic for readers
+   */
+  description?: string | null;
+  author: string | User;
+  /**
+   * Main cover art for the comic series
+   */
+  coverImage?: (string | null) | Media;
+  /**
+   * Team members who work on this comic
+   */
+  credits?:
+    | {
+        role: 'writer' | 'artist' | 'penciller' | 'inker' | 'colorist' | 'letterer' | 'editor' | 'other';
+        /**
+         * Only used if "Other" is selected above
+         */
+        customRole?: string | null;
+        name: string;
+        /**
+         * Optional link to creator's website or social media
+         */
+        url?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  status: 'draft' | 'published' | 'hiatus' | 'completed';
+  publishSchedule: 'daily' | 'weekly' | 'twice-weekly' | 'monthly' | 'irregular' | 'completed' | 'hiatus';
+  /**
+   * Select all genres that apply to your comic
+   */
+  genres?:
+    | (
+        | 'action-adventure'
+        | 'alternate-history'
+        | 'comedy'
+        | 'cyberpunk'
+        | 'drama'
+        | 'dystopian'
+        | 'educational'
+        | 'erotica'
+        | 'fairytale'
+        | 'fan-comic'
+        | 'fantasy'
+        | 'historical'
+        | 'horror'
+        | 'magical-girl'
+        | 'mystery'
+        | 'nonfiction'
+        | 'parody'
+        | 'post-apocalyptic'
+        | 'romance'
+        | 'satire'
+        | 'sci-fi'
+        | 'slice-of-life'
+        | 'sports'
+        | 'steampunk'
+        | 'superhero'
+        | 'urban-fantasy'
+        | 'western'
+      )[]
+    | null;
+  /**
+   * Custom tags for better searchability (e.g., "lgbtq", "anthropomorphic", "noir")
+   */
+  tags?: string[] | null;
+  /**
+   * Check if this comic contains mature/adult content
+   */
+  isNSFW?: boolean | null;
+  seoMeta?: {
+    /**
+     * SEO title (defaults to comic title if empty)
+     */
+    metaTitle?: string | null;
+    /**
+     * SEO description (defaults to comic description if empty)
+     */
+    metaDescription?: string | null;
+    /**
+     * Image for social media sharing (defaults to cover image)
+     */
+    socialImage?: (string | null) | Media;
+  };
+  stats?: {
+    totalPages?: number | null;
+    totalChapters?: number | null;
+    lastPagePublished?: string | null;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * After saving a page, you can use the "Duplicate" button to quickly create the next page with incremented page number.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages".
+ */
+export interface Page {
+  id: string;
+  /**
+   * Which comic series this page belongs to
+   */
+  comic: string | Comic;
+  /**
+   * Which chapter this page belongs to (optional)
+   */
+  chapter?: (string | null) | Chapter;
+  /**
+   * Page number within this chapter (0 = chapter cover, 1+ = regular pages)
+   */
+  chapterPageNumber: number;
+  /**
+   * Auto-calculated sequential number across entire comic (used for navigation)
+   */
+  globalPageNumber?: number | null;
+  /**
+   * Optional title for this specific page
+   */
+  title?: string | null;
+  displayTitle?: string | null;
+  /**
+   * The main comic page image that readers will see
+   */
+  pageImage?: (string | null) | Media;
+  /**
+   * Optional additional images for multi-image pages
+   */
+  pageExtraImages?:
+    | {
+        image: string | Media;
+        /**
+         * Accessibility description for this specific image
+         */
+        altText?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Custom thumbnail image (auto-populated from main page image if empty)
+   */
+  thumbnailImage?: (string | null) | Media;
+  /**
+   * Accessibility description of what happens in this page
+   */
+  altText?: string | null;
+  /**
+   * Optional commentary, behind-the-scenes notes, or author thoughts (Markdown supported)
+   */
+  authorNotes?: string | null;
+  status: 'draft' | 'scheduled' | 'published';
+  /**
+   * When this page should go live (for scheduling)
+   */
+  publishedDate?: string | null;
+  navigation?: {
+    /**
+     * Previous page in the series
+     */
+    previousPage?: (string | null) | Page;
+    /**
+     * Next page in the series
+     */
+    nextPage?: (string | null) | Page;
+    isFirstPage?: boolean | null;
+    isLastPage?: boolean | null;
+  };
+  seoMeta?: {
+    /**
+     * URL-friendly page identifier (auto-generated if empty)
+     */
+    slug?: string | null;
+    /**
+     * SEO title (auto-generated if empty)
+     */
+    metaTitle?: string | null;
+    /**
+     * SEO description (uses alt text if empty)
+     */
+    metaDescription?: string | null;
+  };
+  stats?: {
+    /**
+     * Number of times this page has been viewed
+     */
+    viewCount?: number | null;
+    /**
+     * When this page was first viewed by a reader
+     */
+    firstViewed?: string | null;
+    /**
+     * When this page was last viewed by a reader
+     */
+    lastViewed?: string | null;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Organize comic pages into chapters. Order is currently read-only - use the Move Chapter API endpoint to reorder chapters without conflicts.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "chapters".
+ */
+export interface Chapter {
+  id: string;
+  /**
+   * Which comic series this chapter belongs to
+   */
+  comic: string | Comic;
+  /**
+   * Name of this chapter (e.g., "The Beginning", "Dark Waters")
+   */
+  title: string;
+  /**
+   * Chapter order (read-only). To move: POST /api/move-chapter with chapterId and direction ("up"/"down")
+   */
+  order?: number | null;
+  /**
+   * Optional summary of what happens in this chapter
+   */
+  description?: string | null;
+  seoMeta?: {
+    /**
+     * URL-friendly chapter identifier (auto-generated if empty)
+     */
+    slug?: string | null;
+    /**
+     * SEO title (defaults to chapter title if empty)
+     */
+    metaTitle?: string | null;
+    /**
+     * SEO description for this chapter
+     */
+    metaDescription?: string | null;
+  };
+  stats?: {
+    /**
+     * Number of pages in this chapter
+     */
+    pageCount?: number | null;
+    /**
+     * First page number in this chapter
+     */
+    firstPageNumber?: number | null;
+    /**
+     * Last page number in this chapter
+     */
+    lastPageNumber?: number | null;
+  };
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -165,16 +614,28 @@ export interface PayloadLockedDocument {
   document?:
     | ({
         relationTo: 'users';
-        value: number | User;
+        value: string | User;
+      } | null)
+    | ({
+        relationTo: 'comics';
+        value: string | Comic;
+      } | null)
+    | ({
+        relationTo: 'chapters';
+        value: string | Chapter;
+      } | null)
+    | ({
+        relationTo: 'pages';
+        value: string | Page;
       } | null)
     | ({
         relationTo: 'media';
-        value: number | Media;
+        value: string | Media;
       } | null);
   globalSlug?: string | null;
   user: {
     relationTo: 'users';
-    value: number | User;
+    value: string | User;
   };
   updatedAt: string;
   createdAt: string;
@@ -187,7 +648,7 @@ export interface PayloadPreference {
   id: number;
   user: {
     relationTo: 'users';
-    value: number | User;
+    value: string | User;
   };
   key?: string | null;
   value?:
@@ -218,6 +679,63 @@ export interface PayloadMigration {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  id?: T;
+  displayName?: T;
+  role?: T;
+  status?: T;
+  creatorProfile?:
+    | T
+    | {
+        bio?: T;
+        avatar?: T;
+        website?: T;
+        socialLinks?:
+          | T
+          | {
+              bluesky?: T;
+              instagram?: T;
+              tumblr?: T;
+              discord?: T;
+              patreon?: T;
+              kofi?: T;
+            };
+        preferences?:
+          | T
+          | {
+              emailNotifications?:
+                | T
+                | {
+                    newComments?: T;
+                    weeklyStats?: T;
+                    systemUpdates?: T;
+                  };
+              privacySettings?:
+                | T
+                | {
+                    showEmail?: T;
+                    showStatsPublic?: T;
+                  };
+            };
+      };
+  readerProfile?:
+    | T
+    | {
+        favoriteGenres?: T;
+        readingPreferences?:
+          | T
+          | {
+              hideNSFW?: T;
+              autoSubscribe?: T;
+            };
+      };
+  accountMeta?:
+    | T
+    | {
+        joinedDate?: T;
+        lastActive?: T;
+        totalComics?: T;
+        totalPages?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -237,10 +755,162 @@ export interface UsersSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comics_select".
+ */
+export interface ComicsSelect<T extends boolean = true> {
+  id?: T;
+  title?: T;
+  slug?: T;
+  description?: T;
+  author?: T;
+  coverImage?: T;
+  credits?:
+    | T
+    | {
+        role?: T;
+        customRole?: T;
+        name?: T;
+        url?: T;
+        id?: T;
+      };
+  status?: T;
+  publishSchedule?: T;
+  genres?: T;
+  tags?: T;
+  isNSFW?: T;
+  seoMeta?:
+    | T
+    | {
+        metaTitle?: T;
+        metaDescription?: T;
+        socialImage?: T;
+      };
+  stats?:
+    | T
+    | {
+        totalPages?: T;
+        totalChapters?: T;
+        lastPagePublished?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "chapters_select".
+ */
+export interface ChaptersSelect<T extends boolean = true> {
+  id?: T;
+  comic?: T;
+  title?: T;
+  order?: T;
+  description?: T;
+  seoMeta?:
+    | T
+    | {
+        slug?: T;
+        metaTitle?: T;
+        metaDescription?: T;
+      };
+  stats?:
+    | T
+    | {
+        pageCount?: T;
+        firstPageNumber?: T;
+        lastPageNumber?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages_select".
+ */
+export interface PagesSelect<T extends boolean = true> {
+  id?: T;
+  comic?: T;
+  chapter?: T;
+  chapterPageNumber?: T;
+  globalPageNumber?: T;
+  title?: T;
+  displayTitle?: T;
+  pageImage?: T;
+  pageExtraImages?:
+    | T
+    | {
+        image?: T;
+        altText?: T;
+        id?: T;
+      };
+  thumbnailImage?: T;
+  altText?: T;
+  authorNotes?: T;
+  status?: T;
+  publishedDate?: T;
+  navigation?:
+    | T
+    | {
+        previousPage?: T;
+        nextPage?: T;
+        isFirstPage?: T;
+        isLastPage?: T;
+      };
+  seoMeta?:
+    | T
+    | {
+        slug?: T;
+        metaTitle?: T;
+        metaDescription?: T;
+      };
+  stats?:
+    | T
+    | {
+        viewCount?: T;
+        firstViewed?: T;
+        lastViewed?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "media_select".
  */
 export interface MediaSelect<T extends boolean = true> {
+  id?: T;
+  imageSizes?: T;
   alt?: T;
+  caption?: T;
+  mediaType?: T;
+  uploadedBy?: T;
+  isPublic?: T;
+  comicMeta?:
+    | T
+    | {
+        relatedComic?: T;
+        pageNumber?: T;
+        chapterNumber?: T;
+        isNSFW?: T;
+      };
+  technicalMeta?:
+    | T
+    | {
+        originalDimensions?:
+          | T
+          | {
+              width?: T;
+              height?: T;
+            };
+        fileSize?: T;
+        colorProfile?: T;
+      };
+  usage?:
+    | T
+    | {
+        viewCount?: T;
+        downloadCount?: T;
+        usedInPages?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -252,6 +922,7 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+  sizes?: T | {};
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
