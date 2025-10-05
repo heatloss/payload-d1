@@ -11,12 +11,20 @@
  */
 
 // Conditional import of Sharp (only available in Node.js, not Cloudflare Workers)
-let sharp: any
-try {
-  sharp = require('sharp')
-} catch (e) {
-  // Sharp not available in this environment (likely Cloudflare Workers)
-  sharp = null
+// We'll load Sharp dynamically at runtime when needed
+let sharp: any = null
+
+async function loadSharp() {
+  if (sharp === null) {
+    try {
+      // Dynamic import to avoid build-time errors in Cloudflare Workers
+      sharp = (await import('sharp')).default
+    } catch (_error) {
+      // Sharp not available in this environment (likely Cloudflare Workers)
+      sharp = false // false means we tried and failed
+    }
+  }
+  return sharp || null
 }
 
 export interface ImageSizeConfig {
@@ -86,8 +94,9 @@ export async function generateImageSizes(
   mimeType: string = 'image/jpeg',
   basePath: string = 'media'
 ): Promise<Record<string, GeneratedImageSize>> {
-  // Check if Sharp is available (only in Node.js environment)
-  if (!sharp) {
+  // Load Sharp dynamically (only available in Node.js environment)
+  const sharpInstance = await loadSharp()
+  if (!sharpInstance) {
     console.warn('Sharp is not available in this environment. Image size generation will be skipped.')
     return {}
   }
@@ -104,7 +113,7 @@ export async function generateImageSizes(
 
   for (const config of IMAGE_SIZE_CONFIGS) {
     try {
-      let transformer = sharp(buffer)
+      let transformer = sharpInstance(buffer)
 
       // Apply resize based on config
       if (config.height) {
@@ -121,7 +130,7 @@ export async function generateImageSizes(
 
       // Convert to buffer
       const resizedBuffer = await transformer.toBuffer()
-      const metadata = await sharp(resizedBuffer).metadata()
+      const metadata = await sharpInstance(resizedBuffer).metadata()
 
       // Generate filename for this size
       const sizeFilename = `${baseFilename}-${config.name}.${ext}`
