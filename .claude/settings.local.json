@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(D1_DB=\"/Users/mike/Sites/payload-d1/.wrangler/state/v3/d1/miniflare-D1DatabaseObject/32005945036754a10a12ebbe1381482339f69f2eab74b15679d198e087c9dec7.sqlite\")",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []
