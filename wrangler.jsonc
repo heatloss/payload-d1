@@ -20,7 +20,7 @@
       "binding": "D1",
       "database_id": "665a2109-cac5-470c-a020-9f8f0e219044",
       "database_name": "payload-d1",
-      "remote": true,
+      "remote": false, // Use local D1 for preview/dev
     },
   ],
   "services": [
@@ -42,37 +42,36 @@
     // },
   ],
 
-  // Here's how to configure an additional environment
-  // It can be deployed with `CLOUDFLARE_ENV=staging pnpm run deploy`
-  // "env": {
-  //   "staging": {
-  //     "name": "my-app-staging",
-  //     "d1_databases": [
-  //       {
-  //         "binding": "D1",
-  //         "database_id": "DATABASE_ID",
-  //         "database_name": "my-app-staging",
-  //         "remote": true
-  //       }
-  //     ],
-  //     "services": [
-  //       // The service should match the "name" of your worker
-  //       // {
-  //       //   "binding": "WORKER_SELF_REFERENCE",
-  //       //   "service": "my-app-staging"
-  //       // },
-  //     ],
-  //     "r2_buckets": [
-  //       {
-  //         "binding": "R2",
-  //         "bucket_name": "my-app-staging"
-  //       }
-  //       // Create a R2 binding with the binding name "NEXT_INC_CACHE_R2_BUCKET"
-  //       // {
-  //       //   "binding": "NEXT_INC_CACHE_R2_BUCKET",
-  //       //   "bucket_name": "<BUCKET_NAME>",
-  //       // },
-  //     ]
-  //   }
-  // }
+  // Staging environment - deploy with `CLOUDFLARE_ENV=staging pnpm run deploy`
+  "env": {
+    "staging": {
+      "name": "payload-d1-staging",
+      "d1_databases": [
+        {
+          "binding": "D1",
+          "database_id": "e039de67-aabf-4e3c-b594-5d2fbd50fd38",
+          "database_name": "payload-d1-staging",
+          "remote": true
+        }
+      ],
+      "services": [
+        // The service should match the "name" of your worker
+        // {
+        //   "binding": "WORKER_SELF_REFERENCE",
+        //   "service": "payload-d1-staging"
+        // },
+      ],
+      "r2_buckets": [
+        {
+          "binding": "R2",
+          "bucket_name": "payload-d1-staging"
+        }
+        // Create a R2 binding with the binding name "NEXT_INC_CACHE_R2_BUCKET"
+        // {
+        //   "binding": "NEXT_INC_CACHE_R2_BUCKET",
+        //   "bucket_name": "<BUCKET_NAME>",
+        // },
+      ]
+    }
+  }
 }

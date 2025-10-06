@@ -104,9 +104,14 @@ export async function generateImageSizes(
   // If Sharp is not available, delegate to the WASM implementation
   if (!sharpInstance) {
     console.warn('Sharp not available, attempting to use WASM-based image resizer.')
-    const buffer = imageBuffer instanceof Buffer ? imageBuffer.buffer : imageBuffer
+
+    // To handle both Buffer and ArrayBuffer inputs safely, we create a new
+    // Uint8Array from the input and then get its underlying .buffer.
+    // This guarantees we pass a clean ArrayBuffer to the WASM function.
+    const wasmBuffer = new Uint8Array(imageBuffer).buffer
+
     return generateImageSizesWasm(
-      buffer,
+      wasmBuffer,
       originalFilename,
       r2Bucket,
       mimeType

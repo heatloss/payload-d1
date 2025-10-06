@@ -15,7 +15,7 @@ import {
   decode as pngDecode,
   encode as pngEncode,
 } from '@jsquash/png'
-import { PhotonImage, resize } from '@silvia-odwyer/photon-node'
+import { PhotonImage, resize } from '@silvia-odwyer/photon'
 import type { GeneratedImageSize, ImageSizeConfig } from './generateImageSizes'
 import { IMAGE_SIZE_CONFIGS } from './generateImageSizes'
 
@@ -41,7 +41,14 @@ async function encodeImage(
   height: number,
   mimeType: string,
 ) {
-  const imageData = { data, width, height }
+  // jSquash encoders expect an object that conforms to the standard ImageData interface.
+  const imageData = {
+    data: new Uint8ClampedArray(data),
+    width,
+    height,
+    colorSpace: 'srgb' as const,
+  }
+
   if (mimeType === 'image/png') {
     return pngEncode(imageData)
   }
@@ -70,7 +77,9 @@ export async function generateImageSizesWasm(
 
     // 2. Create a PhotonImage instance from the raw data
     const photonImage = new PhotonImage(
-      decodedImage.data,
+      // Photon expects a Uint8Array, but jSquash decodes to a Uint8ClampedArray.
+      // We must convert it before passing it to the constructor.
+      new Uint8Array(decodedImage.data),
       decodedImage.width,
       decodedImage.height,
     )

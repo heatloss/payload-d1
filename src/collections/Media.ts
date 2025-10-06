@@ -1,5 +1,7 @@
 import type { CollectionConfig } from 'payload'
 import { generateImageSizes } from '../lib/generateImageSizes'
+import { generateImageSizesWasm } from '../lib/generateImageSizesWasm'
+import { generateImageSizesWasmNode } from '../lib/generateImageSizesWasmNode'
 import { getCloudflareContext } from '@opennextjs/cloudflare'
 
 export const Media: CollectionConfig = {
@@ -173,27 +175,6 @@ export const Media: CollectionConfig = {
           admin: {
             description: 'Which comic this image belongs to',
           },
-          defaultValue: async ({ user, req }) => {
-            // Auto-select comic if user has only one
-            if (user && req.payload) {
-              try {
-                const userComics = await req.payload.find({
-                  collection: 'comics',
-                  where: {
-                    author: { equals: user.id }
-                  },
-                  limit: 2 // Only need to check if there's exactly 1
-                })
-                
-                if (userComics.docs.length === 1) {
-                  return userComics.docs[0].id
-                }
-              } catch (error) {
-                console.error('Error getting user comics for default:', error)
-              }
-            }
-            return undefined
-          },
         },
         {
           name: 'pageNumber',
@@ -366,12 +347,25 @@ export const Media: CollectionConfig = {
               console.log(`🎨 Generating image sizes for ${req.file.name} (${mimeType}, ${imageBuffer.length} bytes)...`)
               console.log(`   R2 bucket available: ${!!r2Bucket}`)
 
-              const sizes = await generateImageSizes(
-                imageBuffer,
-                req.file.name || 'image.jpg',
-                r2Bucket,
-                mimeType
-              )
+              // Environment detection:
+              // - Next.js dev server (NODE_ENV=development): Use Sharp via generateImageSizesWasmNode
+              // - Wrangler preview or production: Use WASM via generateImageSizesWasm
+              const isNextDevServer = process.env.NODE_ENV === 'development'
+              console.log(`   Environment: ${isNextDevServer ? 'Next.js dev (Sharp)' : 'Workers/Preview (WASM)'}`)
+
+              const sizes = isNextDevServer
+                ? await generateImageSizesWasmNode(
+                    imageBuffer.buffer.slice(imageBuffer.byteOffset, imageBuffer.byteOffset + imageBuffer.byteLength) as ArrayBuffer,
+                    req.file.name || 'image.jpg',
+                    r2Bucket,
+                    mimeType
+                  )
+                : await generateImageSizesWasm(
+                    imageBuffer.buffer.slice(imageBuffer.byteOffset, imageBuffer.byteOffset + imageBuffer.byteLength) as ArrayBuffer,
+                    req.file.name || 'image.jpg',
+                    r2Bucket,
+                    mimeType
+                  )
 
               data.imageSizes = sizes
               console.log(`✅ Generated ${Object.keys(sizes).length} image sizes for ${req.file.name}`)

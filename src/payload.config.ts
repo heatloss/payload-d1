@@ -65,10 +65,10 @@ export default buildConfig({
       handler: async (req) => {
         const { comicId } = req.routeParams
 
-        if (!comicId) {
+        if (typeof comicId !== 'string') {
           return Response.json(
-            { error: 'Comic ID is required' },
-            { status: 400 }
+            { error: 'Invalid Comic ID format' },
+            { status: 400 },
           )
         }
 
