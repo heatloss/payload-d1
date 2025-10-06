@@ -84,8 +84,12 @@ export const IMAGE_SIZE_CONFIGS: ImageSizeConfig[] = [
   },
 ]
 
+import { generateImageSizesWasm } from './generateImageSizesWasm'
+
 /**
- * Generate all image size variants from a buffer using Sharp
+ * Generate all image size variants from a buffer.
+ * This function acts as a router, using Sharp in Node.js environments
+ * and a WASM-based solution in Cloudflare Workers.
  */
 export async function generateImageSizes(
   imageBuffer: Buffer | ArrayBuffer,
@@ -94,16 +98,25 @@ export async function generateImageSizes(
   mimeType: string = 'image/jpeg',
   basePath: string = 'media'
 ): Promise<Record<string, GeneratedImageSize>> {
-  // Load Sharp dynamically (only available in Node.js environment)
+  // Try to load Sharp; if it fails, we're likely in a Cloudflare environment.
   const sharpInstance = await loadSharp()
+
+  // If Sharp is not available, delegate to the WASM implementation
   if (!sharpInstance) {
-    console.warn('Sharp is not available in this environment. Image size generation will be skipped.')
-    return {}
+    console.warn('Sharp not available, attempting to use WASM-based image resizer.')
+    const buffer = imageBuffer instanceof Buffer ? imageBuffer.buffer : imageBuffer
+    return generateImageSizesWasm(
+      buffer,
+      originalFilename,
+      r2Bucket,
+      mimeType
+    )
   }
 
+  // --- Sharp-based implementation (for local/Node.js environment) ---
+  console.log(`🎨 (Sharp) Generating image sizes for ${originalFilename}...`)
   const sizes: Record<string, GeneratedImageSize> = {}
 
-  // Convert ArrayBuffer to Buffer if needed
   const buffer = imageBuffer instanceof Buffer
     ? imageBuffer
     : Buffer.from(new Uint8Array(imageBuffer))
@@ -132,17 +145,11 @@ export async function generateImageSizes(
       const resizedBuffer = await transformer.toBuffer()
       const metadata = await sharpInstance(resizedBuffer).metadata()
 
-      // Generate filename for this size
       const sizeFilename = `${baseFilename}-${config.name}.${ext}`
-      // Store directly in root, not in subdirectory (PayloadCMS R2 plugin expects flat structure)
       const r2Key = sizeFilename
 
-      // Upload to R2
-      console.log(`    Uploading to R2: ${r2Key} (${resizedBuffer.length} bytes)`)
+      console.log(`    (Sharp) Uploading to R2: ${r2Key} (${resizedBuffer.length} bytes)`)
       try {
-        // Read more: https://github.com/cloudflare/workers-sdk/issues/6047#issuecomment-2691217843
-        // When using local R2 (Wrangler), we need to wrap Node.js Buffers in Blob
-        // Check if we're in a Node.js environment (not Workers)
         const isNodeEnv = typeof process !== 'undefined' && process.versions?.node
         const uploadData = isNodeEnv
           ? new Blob([new Uint8Array(resizedBuffer)])
@@ -153,13 +160,11 @@ export async function generateImageSizes(
             contentType: mimeType,
           },
         })
-        console.log(`    Upload successful`)
       } catch (uploadError: any) {
-        console.error(`    Upload failed:`, uploadError.message || uploadError)
+        console.error(`    (Sharp) Upload failed:`, uploadError.message || uploadError)
         throw uploadError
       }
 
-      // Store metadata with PayloadCMS media API URL
       sizes[config.name] = {
         url: `/api/media/file/${sizeFilename}`,
         width: metadata.width || config.width,
@@ -169,10 +174,9 @@ export async function generateImageSizes(
         filename: sizeFilename,
       }
 
-      console.log(`  ✅ Generated ${config.name}: ${metadata.width}×${metadata.height} (${resizedBuffer.length} bytes)`)
+      console.log(`  ✅ (Sharp) Generated ${config.name}: ${metadata.width}×${metadata.height} (${resizedBuffer.length} bytes)`)
     } catch (error: any) {
-      console.error(`  ❌ Error generating ${config.name} size:`, error)
-      // Continue with other sizes even if one fails
+      console.error(`  ❌ (Sharp) Error generating ${config.name} size:`, error)
     }
   }
 

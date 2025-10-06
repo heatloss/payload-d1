@@ -58,6 +58,78 @@ export default buildConfig({
       },
     }),
   ],
+  endpoints: [
+    {
+      path: '/comic-with-chapters/:comicId',
+      method: 'get',
+      handler: async (req) => {
+        const { comicId } = req.routeParams
+
+        if (!comicId) {
+          return Response.json(
+            { error: 'Comic ID is required' },
+            { status: 400 }
+          )
+        }
+
+        try {
+          // Get the comic
+          const comic = await req.payload.findByID({
+            collection: 'comics',
+            id: comicId,
+          })
+
+          if (!comic) {
+            return Response.json(
+              { error: 'Comic not found' },
+              { status: 404 }
+            )
+          }
+
+          // Get all chapters for this comic, ordered by chapter order
+          const chapters = await req.payload.find({
+            collection: 'chapters',
+            where: {
+              comic: { equals: comicId }
+            },
+            sort: 'order',
+            limit: 1000, // Adjust based on your needs
+          })
+
+          // For each chapter, get all its pages
+          const chaptersWithPages = await Promise.all(
+            chapters.docs.map(async (chapter) => {
+              const pages = await req.payload.find({
+                collection: 'pages',
+                where: {
+                  chapter: { equals: chapter.id }
+                },
+                sort: 'chapterPageNumber',
+                limit: 1000, // Adjust based on expected pages per chapter
+              })
+
+              return {
+                ...chapter,
+                pages: pages.docs
+              }
+            })
+          )
+
+          return Response.json({
+            ...comic,
+            chapters: chaptersWithPages
+          })
+
+        } catch (error) {
+          console.error('Error fetching comic with chapters:', error)
+          return Response.json(
+            { error: 'Failed to fetch comic data' },
+            { status: 500 }
+          )
+        }
+      },
+    },
+  ],
 })
 
 // Adapted from https://github.com/opennextjs/opennextjs-cloudflare/blob/d00b3a13e42e65aad76fba41774815726422cc39/packages/cloudflare/src/api/cloudflare-context.ts#L328C36-L328C46
