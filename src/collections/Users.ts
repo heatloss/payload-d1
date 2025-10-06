@@ -408,11 +408,11 @@ export const Users: CollectionConfig = {
           // Only update stats if this isn't already a stats update and if relevant user data changed
           const statsChanged = previousDoc?.accountMeta?.totalComics !== doc.accountMeta?.totalComics ||
                                previousDoc?.accountMeta?.totalPages !== doc.accountMeta?.totalPages
-          
+
           // Only run if this is NOT a stats update and role/status might affect comic visibility
-          const relevantChange = previousDoc?.role !== doc.role || 
+          const relevantChange = previousDoc?.role !== doc.role ||
                                  previousDoc?.status !== doc.status
-          
+
           if (!statsChanged && relevantChange) {
             try {
               // Count comics created by this user
@@ -422,17 +422,17 @@ export const Users: CollectionConfig = {
                   author: { equals: doc.id },
                 },
               })
-              
-              // Count pages in comics created by this user  
+
+              // Count pages in comics created by this user
               const pages = await req.payload.find({
                 collection: 'pages',
                 where: {
                   'comic.author': { equals: doc.id },
                 },
               })
-              
+
               // Only update if the counts actually changed
-              if (comics.totalDocs !== doc.accountMeta?.totalComics || 
+              if (comics.totalDocs !== doc.accountMeta?.totalComics ||
                   pages.totalDocs !== doc.accountMeta?.totalPages) {
                 await req.payload.update({
                   collection: 'users',

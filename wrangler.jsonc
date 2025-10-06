@@ -20,7 +20,7 @@
       "binding": "D1",
       "database_id": "665a2109-cac5-470c-a020-9f8f0e219044",
       "database_name": "payload-d1",
-      "remote": false, // Use local D1 for preview/dev
+      "remote": true,
     },
   ],
   "services": [
