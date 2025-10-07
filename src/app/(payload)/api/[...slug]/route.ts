@@ -11,9 +11,37 @@ import {
   REST_PUT,
 } from '@payloadcms/next/routes'
 
-export const GET = REST_GET(config)
-export const POST = REST_POST(config)
-export const DELETE = REST_DELETE(config)
-export const PATCH = REST_PATCH(config)
-export const PUT = REST_PUT(config)
-export const OPTIONS = REST_OPTIONS(config)
+// Wrap handlers with detailed error logging
+const wrapHandler = (handler: any, method: string) => {
+  return async (req: Request, context: any) => {
+    try {
+      console.log(`[${method}] ${req.url}`)
+      const result = await handler(req, context)
+      return result
+    } catch (error: any) {
+      console.error(`[${method}] Error in API route:`, {
+        message: error?.message,
+        stack: error?.stack,
+        name: error?.name,
+        cause: error?.cause,
+        url: req.url,
+        digest: error?.digest,
+      })
+      throw error
+    }
+  }
+}
+
+const restGet = REST_GET(config)
+const restPost = REST_POST(config)
+const restDelete = REST_DELETE(config)
+const restPatch = REST_PATCH(config)
+const restPut = REST_PUT(config)
+const restOptions = REST_OPTIONS(config)
+
+export const GET = wrapHandler(restGet, 'GET')
+export const POST = wrapHandler(restPost, 'POST')
+export const DELETE = wrapHandler(restDelete, 'DELETE')
+export const PATCH = wrapHandler(restPatch, 'PATCH')
+export const PUT = wrapHandler(restPut, 'PUT')
+export const OPTIONS = wrapHandler(restOptions, 'OPTIONS')

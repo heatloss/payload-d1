@@ -8,6 +8,7 @@ export const Users: CollectionConfig = {
     group: 'Admin',
     hidden: ({ user }) => user?.role !== 'admin', // Hide from non-admin users
   },
+  versions: false, // Disable drafts/versions to avoid potential issues
   auth: {
     verify: false, // Disable email verification for local development
     forgotPassword: {

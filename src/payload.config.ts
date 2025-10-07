@@ -38,6 +38,10 @@ export default buildConfig({
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
   db: sqliteD1Adapter({ binding: cloudflare.env.D1 }),
+  debug: true,
+  onInit: async (payload) => {
+    payload.logger.info('Payload initialized')
+  },
   cors: [
     process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000',
     'http://localhost:3333',
