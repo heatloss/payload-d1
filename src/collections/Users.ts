@@ -47,6 +47,16 @@ export const Users: CollectionConfig = {
   },
   fields: [
     {
+      name: 'id',
+      type: 'text',
+      required: true,
+      admin: {
+        hidden: true,
+      },
+      // Don't use hooks - let Payload's DB adapter handle ID generation
+      // The D1 adapter will use existing UUIDs from the database
+    },
+    {
       name: 'displayName',
       type: 'text',
       required: false, // Temporarily optional for setup

@@ -124,7 +124,7 @@ export interface UserAuthOperations {
  * via the `definition` "users".
  */
 export interface User {
-  id: string;
+  id: number;
   /**
    * Public name shown to readers and other creators
    */
@@ -142,7 +142,7 @@ export interface User {
     /**
      * Your profile picture for comic pages and author info
      */
-    avatar?: (string | null) | Media;
+    avatar?: (number | null) | Media;
     /**
      * Your personal website or portfolio
      */
@@ -239,7 +239,7 @@ export interface User {
  * via the `definition` "media".
  */
 export interface Media {
-  id: string;
+  id: number;
   /**
    * Auto-generated image variants stored as JSON
    */
@@ -264,14 +264,14 @@ export interface Media {
    * What type of image is this?
    */
   mediaType: 'general' | 'comic_page' | 'comic_cover' | 'chapter_cover' | 'user_avatar' | 'website_asset';
-  uploadedBy: string | User;
+  uploadedBy?: (number | null) | User;
   /**
    * Whether this image can be viewed by the public
    */
   isPublic?: boolean | null;
   comicMeta?: {
     /**
-     * Which comic this image belongs to
+     * Which comic this image belongs to (leave blank to select later)
      */
     relatedComic?: (string | null) | Comic;
     /**
@@ -355,11 +355,11 @@ export interface Comic {
    * A brief summary of your webcomic for readers
    */
   description?: string | null;
-  author: string | User;
+  author: number | User;
   /**
    * Main cover art for the comic series
    */
-  coverImage?: (string | null) | Media;
+  coverImage?: (number | null) | Media;
   /**
    * Team members who work on this comic
    */
@@ -434,7 +434,7 @@ export interface Comic {
     /**
      * Image for social media sharing (defaults to cover image)
      */
-    socialImage?: (string | null) | Media;
+    socialImage?: (number | null) | Media;
   };
   stats?: {
     totalPages?: number | null;
@@ -476,13 +476,13 @@ export interface Page {
   /**
    * The main comic page image that readers will see
    */
-  pageImage?: (string | null) | Media;
+  pageImage?: (number | null) | Media;
   /**
    * Optional additional images for multi-image pages
    */
   pageExtraImages?:
     | {
-        image: string | Media;
+        image: number | Media;
         /**
          * Accessibility description for this specific image
          */
@@ -493,7 +493,7 @@ export interface Page {
   /**
    * Custom thumbnail image (auto-populated from main page image if empty)
    */
-  thumbnailImage?: (string | null) | Media;
+  thumbnailImage?: (number | null) | Media;
   /**
    * Accessibility description of what happens in this page
    */
@@ -614,7 +614,7 @@ export interface PayloadLockedDocument {
   document?:
     | ({
         relationTo: 'users';
-        value: string | User;
+        value: number | User;
       } | null)
     | ({
         relationTo: 'comics';
@@ -630,12 +630,12 @@ export interface PayloadLockedDocument {
       } | null)
     | ({
         relationTo: 'media';
-        value: string | Media;
+        value: number | Media;
       } | null);
   globalSlug?: string | null;
   user: {
     relationTo: 'users';
-    value: string | User;
+    value: number | User;
   };
   updatedAt: string;
   createdAt: string;
@@ -648,7 +648,7 @@ export interface PayloadPreference {
   id: number;
   user: {
     relationTo: 'users';
-    value: string | User;
+    value: number | User;
   };
   key?: string | null;
   value?:
@@ -679,7 +679,6 @@ export interface PayloadMigration {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
-  id?: T;
   displayName?: T;
   role?: T;
   status?: T;
@@ -877,7 +876,6 @@ export interface PagesSelect<T extends boolean = true> {
  * via the `definition` "media_select".
  */
 export interface MediaSelect<T extends boolean = true> {
-  id?: T;
   imageSizes?: T;
   alt?: T;
   caption?: T;
