@@ -77,6 +77,37 @@ export const Media: CollectionConfig = {
           Cell: '@/components/fields/ImageSizesCell#ImageSizesCell',
         },
       },
+      hooks: {
+        afterRead: [
+          ({ value }) => {
+            // Handle legacy/corrupt data where imageSizes is the literal string "image_sizes"
+            if (typeof value === 'string' && value === 'image_sizes') {
+              console.warn('⚠️  Found corrupt imageSizes data (literal string "image_sizes"), returning null')
+              return null
+            }
+            // If it's a string but looks like JSON, try parsing it
+            if (typeof value === 'string') {
+              try {
+                return JSON.parse(value)
+              } catch (e) {
+                console.warn('⚠️  Failed to parse imageSizes JSON string:', e)
+                return null
+              }
+            }
+            return value
+          }
+        ],
+        beforeChange: [
+          ({ value }) => {
+            // Ensure we're storing proper JSON, not a string
+            if (value && typeof value === 'object') {
+              // D1 adapter should handle this, but being explicit
+              return value
+            }
+            return value
+          }
+        ]
+      }
     },
     {
       name: 'alt',
