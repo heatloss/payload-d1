@@ -241,18 +241,6 @@ export interface User {
 export interface Media {
   id: string;
   /**
-   * Auto-generated image variants stored as JSON
-   */
-  imageSizes?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  /**
    * Optional alt text (for webcomics, alt text is usually set on the page, not the raw image)
    */
   alt?: string | null;
@@ -878,7 +866,6 @@ export interface PagesSelect<T extends boolean = true> {
  */
 export interface MediaSelect<T extends boolean = true> {
   id?: T;
-  imageSizes?: T;
   alt?: T;
   caption?: T;
   mediaType?: T;

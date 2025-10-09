@@ -31,10 +31,15 @@ export const Media: CollectionConfig = {
       }
     },
     delete: ({ req: { user } }) => {
+      console.log('Media delete access check:', { user: user?.id, role: user?.role })
       if (user?.role === 'admin') return true
       if (user?.role === 'editor') return true
-      if (!user?.id) return false
+      if (!user?.id) {
+        console.log('Media delete access result: false (no user)')
+        return false
+      }
       // Creators can only delete media they uploaded
+      console.log('Media delete access result: conditional (checking uploadedBy)')
       return {
         uploadedBy: {
           equals: user.id,
@@ -234,7 +239,6 @@ export const Media: CollectionConfig = {
         position: 'sidebar',
         readOnly: true,
       },
-      defaultValue: ({ user }) => user?.id,
       hooks: {
         beforeValidate: [
           ({ req, operation, value }) => {
@@ -409,11 +413,12 @@ export const Media: CollectionConfig = {
 
             for (const size of sizeVariants) {
               if (size && typeof size === 'object' && 'filename' in size && typeof size.filename === 'string') {
+                const filename = size.filename as string
                 try {
-                  await r2Bucket.delete(size.filename)
-                  console.log(`   ✅ Deleted ${size.filename}`)
+                  await r2Bucket.delete(filename)
+                  console.log(`   ✅ Deleted ${filename}`)
                 } catch (error) {
-                  console.error(`   ❌ Failed to delete ${size.filename}:`, error)
+                  console.error(`   ❌ Failed to delete ${filename}:`, error)
                 }
               }
             }

@@ -18,14 +18,17 @@ import { Pages } from './collections/Pages'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
-const isNextBuild = process.argv.some(arg => arg.includes('next') && (arg.includes('build') || process.argv.includes('build')))
-const cloudflareRemoteBindings = process.env.NODE_ENV === 'production' && !isNextBuild
-const isCommandLineOperation = process.argv.find((value) => value.match(/^(generate|migrate):?/))
-
-const cloudflare =
-  isCommandLineOperation || !cloudflareRemoteBindings
-    ? await getCloudflareContextFromWrangler()
-    : await getCloudflareContext({ async: true })
+// Detect if we're running in Workers runtime by checking if wrangler module is available
+// In Workers: wrangler module doesn't exist, so we use runtime context
+// In Node/build: wrangler module exists, so we use getPlatformProxy
+let cloudflare: CloudflareContext
+try {
+  // Try to use wrangler - this will fail in Workers runtime
+  cloudflare = await getCloudflareContextFromWrangler()
+} catch (error) {
+  // If wrangler import fails, we're in Workers runtime
+  cloudflare = await getCloudflareContext({ async: true })
+}
 
 export default buildConfig({
   admin: {
@@ -142,7 +145,7 @@ function getCloudflareContextFromWrangler(): Promise<CloudflareContext> {
     ({ getPlatformProxy }) =>
       getPlatformProxy({
         environment: process.env.CLOUDFLARE_ENV,
-        experimental: { remoteBindings: cloudflareRemoteBindings },
+        experimental: { remoteBindings: false },
       } satisfies GetPlatformProxyOptions),
   )
 }
