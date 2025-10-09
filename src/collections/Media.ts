@@ -54,8 +54,18 @@ export const Media: CollectionConfig = {
       admin: {
         hidden: true,
       },
-      // Don't use hooks - let Payload's DB adapter handle ID generation
-      // The D1 adapter will use existing UUIDs from the database
+      hooks: {
+        beforeValidate: [
+          ({ value, operation }) => {
+            // Only generate ID on create, not on update
+            if (operation === 'create' && !value) {
+              // Use crypto.randomUUID() which is available in both Node and Workers
+              return crypto.randomUUID()
+            }
+            return value
+          }
+        ]
+      }
     },
     {
       name: 'imageSizesPreview',
