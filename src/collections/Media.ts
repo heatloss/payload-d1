@@ -1,6 +1,4 @@
 import type { CollectionConfig } from 'payload'
-import { generateImageSizes } from '../lib/generateImageSizes'
-import { getCloudflareContext } from '@opennextjs/cloudflare'
 
 export const Media: CollectionConfig = {
   slug: 'media',
@@ -40,9 +38,58 @@ export const Media: CollectionConfig = {
   },
   upload: {
     staticDir: 'media',
-    // NOTE: Image sizes disabled due to D1's 100 parameter limit
-    // Sizes are generated via custom hook and stored as JSON
-    imageSizes: [],
+    // Payload automatically generates these sizes and stores them in flattened DB columns
+    imageSizes: [
+      {
+        name: 'thumbnail',
+        width: 400,
+        height: undefined, // Let height be determined by aspect ratio
+        position: 'centre',
+        fit: 'inside', // Preserve aspect ratio, don't crop
+      },
+      {
+        name: 'thumbnail_small',
+        width: 200,
+        height: undefined, // Smaller version for compact displays
+        position: 'centre',
+        fit: 'inside',
+      },
+      {
+        name: 'webcomic_page',
+        width: 800,
+        height: undefined,
+        position: 'centre',
+        fit: 'inside',
+      },
+      {
+        name: 'webcomic_mobile',
+        width: 400,
+        height: undefined,
+        position: 'centre',
+        fit: 'inside',
+      },
+      {
+        name: 'cover_image',
+        width: 600,
+        height: 800,
+        position: 'centre',
+        fit: 'cover',
+      },
+      {
+        name: 'social_preview',
+        width: 1200,
+        height: 630,
+        position: 'centre',
+        fit: 'cover',
+      },
+      {
+        name: 'avatar',
+        width: 200,
+        height: 200,
+        position: 'centre',
+        fit: 'cover',
+      },
+    ],
     mimeTypes: ['image/*'],
     disableLocalStorage: true, // R2 only, no local storage
   },
@@ -61,58 +108,6 @@ export const Media: CollectionConfig = {
             if (operation === 'create' && !value) {
               // Use crypto.randomUUID() which is available in both Node and Workers
               return crypto.randomUUID()
-            }
-            return value
-          }
-        ]
-      }
-    },
-    {
-      name: 'imageSizesPreview',
-      type: 'ui',
-      admin: {
-        components: {
-          Field: '@/components/fields/ImageSizesUI#ImageSizesUI',
-        },
-      },
-    },
-    {
-      name: 'imageSizes',
-      type: 'json',
-      label: 'Generated Image Sizes (Raw Data)',
-      admin: {
-        readOnly: true,
-        description: 'Auto-generated image variants stored as JSON',
-        components: {
-          Cell: '@/components/fields/ImageSizesCell#ImageSizesCell',
-        },
-      },
-      hooks: {
-        afterRead: [
-          ({ value }) => {
-            // Handle legacy/corrupt data where imageSizes is the literal string "image_sizes"
-            if (typeof value === 'string' && value === 'image_sizes') {
-              console.warn('⚠️  Found corrupt imageSizes data (literal string "image_sizes"), returning null')
-              return null
-            }
-            // If it's a string but looks like JSON, try parsing it
-            if (typeof value === 'string') {
-              try {
-                return JSON.parse(value)
-              } catch (e) {
-                console.warn('⚠️  Failed to parse imageSizes JSON string:', e)
-                return null
-              }
-            }
-            return value
-          }
-        ],
-        beforeChange: [
-          ({ value }) => {
-            // Ensure we're storing proper JSON, not a string
-            if (value && typeof value === 'object') {
-              // D1 adapter should handle this, but being explicit
-              return value
             }
             return value
           }
@@ -332,74 +327,15 @@ export const Media: CollectionConfig = {
     },
   ],
   hooks: {
-    afterDelete: [
-      async ({ doc }) => {
-        // Clean up generated image size files from R2
-        if (doc.imageSizes && typeof doc.imageSizes === 'object') {
-          try {
-            const cloudflare = await getCloudflareContext({ async: true })
-            const r2Bucket = cloudflare.env.R2
-
-            const sizes = Object.values(doc.imageSizes)
-            console.log(`🗑️  Deleting ${sizes.length} generated image sizes for ${doc.filename}`)
-
-            for (const size of sizes) {
-              if (size && typeof size === 'object' && 'filename' in size && typeof size.filename === 'string') {
-                try {
-                  await r2Bucket.delete(size.filename)
-                  console.log(`   ✅ Deleted ${size.filename}`)
-                } catch (error) {
-                  console.error(`   ❌ Failed to delete ${size.filename}:`, error)
-                }
-              }
-            }
-          } catch (error) {
-            console.error('❌ Error cleaning up image sizes:', error)
-          }
-        }
-      },
-    ],
     beforeChange: [
-      async ({ data, req, operation }) => {
+      async ({ data, req }) => {
         // Extract technical metadata from uploaded file
         if (req.file) {
           data.technicalMeta = {
             ...data.technicalMeta,
             fileSize: req.file.size,
           }
-
-          // Generate image size variants (D1 parameter limit workaround)
-          if (operation === 'create' && req.file.data) {
-            try {
-              const cloudflare = await getCloudflareContext({ async: true })
-              const r2Bucket = cloudflare.env.R2
-
-              // Ensure we have a proper Buffer
-              const imageBuffer = Buffer.isBuffer(req.file.data)
-                ? req.file.data
-                : Buffer.from(req.file.data)
-
-              const mimeType = req.file.mimetype || 'image/jpeg'
-
-              console.log(`🎨 Generating image sizes for ${req.file.name} (${mimeType}, ${imageBuffer.length} bytes)...`)
-              console.log(`   R2 bucket available: ${!!r2Bucket}`)
-
-              const sizes = await generateImageSizes(
-                imageBuffer,
-                req.file.name || 'image.jpg',
-                r2Bucket,
-                mimeType
-              )
-
-              data.imageSizes = sizes
-              console.log(`✅ Generated ${Object.keys(sizes).length} image sizes for ${req.file.name}`)
-            } catch (error) {
-              console.error('❌ Error generating image sizes:', error)
-              // Don't fail the upload if size generation fails
-            }
-          }
         }
-
         return data
       },
     ],
