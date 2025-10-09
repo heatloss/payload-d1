@@ -47,25 +47,6 @@ export const Users: CollectionConfig = {
   },
   fields: [
     {
-      name: 'id',
-      type: 'text',
-      required: true,
-      admin: {
-        hidden: true, // Hide from admin form since it's auto-generated
-      },
-      hooks: {
-        beforeValidate: [
-          ({ value }) => {
-            // Generate UUID if not provided (for new records)
-            if (!value) {
-              return crypto.randomUUID()
-            }
-            return value
-          }
-        ]
-      }
-    },
-    {
       name: 'displayName',
       type: 'text',
       required: false, // Temporarily optional for setup

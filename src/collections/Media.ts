@@ -48,24 +48,6 @@ export const Media: CollectionConfig = {
   },
   fields: [
     {
-      name: 'id',
-      type: 'text',
-      required: true,
-      admin: {
-        hidden: true,
-      },
-      hooks: {
-        beforeValidate: [
-          ({ value }) => {
-            if (!value) {
-              return crypto.randomUUID()
-            }
-            return value
-          }
-        ]
-      }
-    },
-    {
       name: 'imageSizesPreview',
       type: 'ui',
       admin: {
@@ -125,19 +107,23 @@ export const Media: CollectionConfig = {
       name: 'uploadedBy',
       type: 'relationship',
       relationTo: 'users',
-      required: true,
+      required: false, // Changed to false to prevent validation errors when user context is missing
       label: 'Uploaded By',
       admin: {
         position: 'sidebar',
         readOnly: true,
       },
-      defaultValue: ({ user }) => user?.id,
       hooks: {
         beforeValidate: [
           ({ req, operation, value }) => {
-            // Auto-assign current user as uploader
-            if (operation === 'create' && !value && req.user) {
-              return req.user.id
+            // Auto-assign current user as uploader on create
+            if (operation === 'create' && !value) {
+              // Safely access user ID
+              if (req.user?.id) {
+                return req.user.id
+              }
+              // If no user context, log warning but don't fail
+              console.warn('⚠️  Media upload: No user context available in beforeValidate hook')
             }
             return value
           },
@@ -171,29 +157,10 @@ export const Media: CollectionConfig = {
           relationTo: 'comics',
           label: 'Related Comic',
           admin: {
-            description: 'Which comic this image belongs to',
+            description: 'Which comic this image belongs to (leave blank to select later)',
           },
-          defaultValue: async ({ user, req }) => {
-            // Auto-select comic if user has only one
-            if (user && req.payload) {
-              try {
-                const userComics = await req.payload.find({
-                  collection: 'comics',
-                  where: {
-                    author: { equals: user.id }
-                  },
-                  limit: 2 // Only need to check if there's exactly 1
-                })
-                
-                if (userComics.docs.length === 1) {
-                  return userComics.docs[0].id
-                }
-              } catch (error) {
-                console.error('Error getting user comics for default:', error)
-              }
-            }
-            return undefined
-          },
+          // Removed async defaultValue - it was causing issues in Workers runtime
+          // Users can manually select the comic when uploading
         },
         {
           name: 'pageNumber',
