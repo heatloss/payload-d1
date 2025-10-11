@@ -10,7 +10,18 @@ export const Media: CollectionConfig = {
   },
   access: {
     create: ({ req: { user } }) => {
-      return user && ['creator', 'editor', 'admin'].includes(user.role)
+      // Debug logging for access control
+      console.log('🔐 Media create access check:', {
+        hasUser: !!user,
+        userId: user?.id,
+        userRole: user?.role,
+        userEmail: user?.email,
+      })
+
+      const hasAccess = user && ['creator', 'editor', 'admin'].includes(user.role)
+      console.log('🔐 Access result:', hasAccess)
+
+      return hasAccess
     },
     read: () => true, // Media files are public
     update: ({ req: { user } }) => {
@@ -38,58 +49,61 @@ export const Media: CollectionConfig = {
   },
   upload: {
     staticDir: 'media',
-    // Payload automatically generates these sizes and stores them in flattened DB columns
-    imageSizes: [
-      {
-        name: 'thumbnail',
-        width: 400,
-        height: undefined, // Let height be determined by aspect ratio
-        position: 'centre',
-        fit: 'inside', // Preserve aspect ratio, don't crop
-      },
-      {
-        name: 'thumbnail_small',
-        width: 200,
-        height: undefined, // Smaller version for compact displays
-        position: 'centre',
-        fit: 'inside',
-      },
-      {
-        name: 'webcomic_page',
-        width: 800,
-        height: undefined,
-        position: 'centre',
-        fit: 'inside',
-      },
-      {
-        name: 'webcomic_mobile',
-        width: 400,
-        height: undefined,
-        position: 'centre',
-        fit: 'inside',
-      },
-      {
-        name: 'cover_image',
-        width: 600,
-        height: 800,
-        position: 'centre',
-        fit: 'cover',
-      },
-      {
-        name: 'social_preview',
-        width: 1200,
-        height: 630,
-        position: 'centre',
-        fit: 'cover',
-      },
-      {
-        name: 'avatar',
-        width: 200,
-        height: 200,
-        position: 'centre',
-        fit: 'cover',
-      },
-    ],
+    // Only generate image sizes in development where sharp is available
+    // In Workers/production, skip image resizing (sharp doesn't work in Workers)
+    ...(process.env.NODE_ENV === 'development' ? {
+      imageSizes: [
+        {
+          name: 'thumbnail',
+          width: 400,
+          height: undefined,
+          position: 'centre',
+          fit: 'inside',
+        },
+        {
+          name: 'thumbnail_small',
+          width: 200,
+          height: undefined,
+          position: 'centre',
+          fit: 'inside',
+        },
+        {
+          name: 'webcomic_page',
+          width: 800,
+          height: undefined,
+          position: 'centre',
+          fit: 'inside',
+        },
+        {
+          name: 'webcomic_mobile',
+          width: 400,
+          height: undefined,
+          position: 'centre',
+          fit: 'inside',
+        },
+        {
+          name: 'cover_image',
+          width: 600,
+          height: 800,
+          position: 'centre',
+          fit: 'cover',
+        },
+        {
+          name: 'social_preview',
+          width: 1200,
+          height: 630,
+          position: 'centre',
+          fit: 'cover',
+        },
+        {
+          name: 'avatar',
+          width: 200,
+          height: 200,
+          position: 'centre',
+          fit: 'cover',
+        },
+      ],
+    } : {}),
     mimeTypes: ['image/*'],
     disableLocalStorage: true, // R2 only, no local storage
   },

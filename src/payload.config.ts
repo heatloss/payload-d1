@@ -8,8 +8,6 @@ import { fileURLToPath } from 'url'
 import { CloudflareContext, getCloudflareContext } from '@opennextjs/cloudflare'
 import { GetPlatformProxyOptions } from 'wrangler'
 import { r2Storage } from '@payloadcms/storage-r2'
-import sharp from 'sharp'
-
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Comics } from './collections/Comics'
@@ -39,17 +37,8 @@ export default buildConfig({
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
   db: sqliteD1Adapter({ binding: cloudflare.env.D1 }),
-  sharp,
-  cors: [
-    process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000',
-    'http://localhost:3333',
-    'http://localhost:8888',  // Frontend dev server
-  ],
-  csrf: [
-    process.env.PAYLOAD_PUBLIC_SERVER_URL || 'http://localhost:3000',
-    'http://localhost:3333',
-    'http://localhost:8888',  // Frontend dev server
-  ],
+  // sharp only works in Node.js, not in Cloudflare Workers
+  // In development, sharp is automatically used if available as a devDependency
   cookiePrefix: 'payload',
   plugins: [
     payloadCloudPlugin(),
